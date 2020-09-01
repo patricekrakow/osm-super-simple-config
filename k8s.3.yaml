@@ -1,0 +1,108 @@
+# osm-super-simple/K8s.3.yaml | Add a 'version' label for 'service-a'.
+#   Deploy 'demo' Namespace
+#   Deploy 'service-a' ServiceAccount
+#   Deploy 'service-a-deployment' Deployment
+#   Deploy 'service-a' Service
+#   Deploy 'client-x' ServiceAccount
+#   Deploy 'client-x-deployment' Deployment
+#   Deploy 'client-x' (dummy) Service [Required by OSM]
+---
+# Deploy 'demo' Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo
+---
+# Deploy 'service-a' ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: service-a
+  namespace: demo
+---
+# Deploy 'service-a-deployment' Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-a-deployment
+  namespace: demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-a
+      version: 1.0.0
+  template:
+    metadata:
+      labels:
+        app: service-a
+        version: 1.0.0
+    spec:
+      serviceAccountName: service-a
+      containers:
+      - name: service-a
+        image: patrice1972/service-a:1.0.0
+        ports:
+        - name: service-a-port
+          protocol: TCP
+          containerPort: 3000
+---
+# Deploy 'service-a' Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-a
+  namespace: demo
+spec:
+  selector:
+    app: service-a
+    version: 1.0.0
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000
+---
+# Deploy 'client-x' ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: client-x
+  namespace: demo
+---
+# Deploy 'client-x-deployment' Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client-x-deployment
+  namespace: demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client-x
+  template:
+    metadata:
+      labels:
+        app: client-x
+    spec:
+      serviceAccountName: client-x
+      containers:
+      - name: client-x
+        image: patrice1972/client-x:1.0.1
+        env:
+        - name: API_HOST
+          value: "service-a.demo"
+---
+# Deploy 'client-x' (dummy) Service [Required by OSM]
+apiVersion: v1
+kind: Service
+metadata:
+  name: client-x
+  namespace: demo
+spec:
+  selector:
+    app: client-x
+  ports:
+  - protocol: TCP
+    port: 9999
+    name: dummy-unused-port
